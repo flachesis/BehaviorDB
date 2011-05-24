@@ -1039,7 +1039,7 @@ Pool::append(AddrType address, char const* data, SizeType size,
 
 		// erase old header
 		
-		fseek(c_file_, -8, SEEK_CUR);
+		fseeko(c_file_, -8, SEEK_CUR);
 		fprintf(c_file_, "%08x", 0);
 
 		//Profiler.begin("Migration");
@@ -1065,7 +1065,7 @@ Pool::append(AddrType address, char const* data, SizeType size,
 	// update header
 	ch.size += size;
 	
-	fseek(c_file_, -8, SEEK_CUR);
+	fseeko(c_file_, -8, SEEK_CUR);
 	write_header(c_file_, ch);
 
 	if(ferror(c_file_)){
@@ -1074,7 +1074,7 @@ Pool::append(AddrType address, char const* data, SizeType size,
 	}
 	
 	// append data
-	fseek(c_file_, ch.size - size, SEEK_CUR);
+	fseeko(c_file_, ch.size - size, SEEK_CUR);
 	if(size !=  fwrite(data, 1, size, c_file_)){
 		write_log("appErr", &address, ftello(c_file_), size, strerror(errno), __LINE__);
 		error_num = SYSTEM_ERROR;
