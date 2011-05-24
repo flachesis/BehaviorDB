@@ -29,7 +29,8 @@
 #define fseeko(X,Y,Z) _fseeki64(X,Y,Z)
 #endif
 
-#define MIGBUF_SIZ 2*1024*1024
+//#define MIGBUF_SIZ 0x200000u
+const unsigned int MIGBUF_SIZ(0x200000u);
 
 // path delimeter macro
 #ifdef _WINDOWS
@@ -518,6 +519,7 @@ BehaviorDB::append(AddrType address, char const* data, SizeType size)
 
 	if(next_pIdx > 15)
 		next_pIdx = 15;
+	
 
 	rt = pools_[pIdx].append(address, data, size, next_pIdx, pools_);
 	
@@ -1023,13 +1025,15 @@ Pool::append(AddrType address, char const* data, SizeType size,
 	}
 
 	if(ch.size + size > chunk_size_ ){
+		
+		
 
 		// erase old header
-		
 		fseeko(c_file_, -8, SEEK_CUR);
 		fprintf(c_file_, "%08x", 0);
 		if(ferror(c_file_)){
 			write_log("appErr", &address, ftello(c_file_), ch.size + size, strerror(errno), __LINE__);
+			// error num
 			return -1;
 		}
 		
@@ -1038,6 +1042,12 @@ Pool::append(AddrType address, char const* data, SizeType size,
 		if(pred_)
 			next_pool_idx = pred_(rh_, address, next_pool_idx);
 		
+		if(next_pool_idx == address>>28){
+			write_log("appErr", &address, ftello(c_file_), ch.size + size, strerror(errno), __LINE__);
+			error_num = ADDRESS_OVERFLOW;
+			return -1;
+		}
+
 		AddrType rt = next_pool_idx<<28 | next_pool[next_pool_idx].migrate(c_file_, ch, data, size);
 
 		//Profiler.end("Migration");
@@ -1232,14 +1242,18 @@ Pool::migrate(FILE* src_file, ChunkHeader ch,
 	SizeType toRead = ch.size;
 	SizeType readCnt(0);
 	while(toRead){
-		readCnt = (toRead >= MIGBUF_SIZ)?
-			fread(migbuf_, 1, MIGBUF_SIZ, src_file) :
-			fread(migbuf_, 1, toRead, src_file) ;
+		if(toRead > MIGBUF_SIZ){
+			readCnt = fread(migbuf_, 1, MIGBUF_SIZ, src_file);
+		}else{
+			readCnt = fread(migbuf_, 1, toRead, src_file);
+		}
 		if(!readCnt){
 			int state = fflush(src_file);
-			readCnt = (toRead >= MIGBUF_SIZ)?
-				fread(migbuf_, 1, MIGBUF_SIZ, src_file) :
-				fread(migbuf_, 1, toRead, src_file) ;
+			if(toRead > MIGBUF_SIZ){
+				readCnt = fread(migbuf_, 1, MIGBUF_SIZ, src_file);
+			}else{
+				readCnt = fread(migbuf_, 1, toRead, src_file);
+			}
 			if(!readCnt){
 				write_log("migErr", &addr, ftello(src_file), ch.size, strerror(errno), __LINE__);
 				bool iseof = 0 != feof(src_file);
