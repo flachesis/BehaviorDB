@@ -1,7 +1,8 @@
 #ifndef _BEHAVIORDB_H
 #define _BEHAVIORDB_H
 
-
+#pragma warning(disable: 4996)
+#pragma warning(disable: 4290)
 /// @todo (Done) TODO: Configuration object for BehaviorDB
 /// @todo TODO: Pure C wrapper
 /// @todo (Done) TODO: iovec methods

@@ -25,6 +25,8 @@
 #else
 #include <direct.h>
 #include <io.h>
+#define ftello(X) _ftelli64(X)
+#define fseeko(X,Y,Z) _fseeki64(X,Y,Z)
 #endif
 
 #define MIGBUF_SIZ 2*1024*1024
@@ -153,7 +155,7 @@ protected:
 	void
 	write_log(char const *operation, 
 		AddrType const* address,
-		std::streampos tell,
+		long long tell,
 		SizeType size = 0,
 		char const *desc = 0,
 		int src_line = 0);
@@ -168,7 +170,7 @@ private:
 	SizeType chunk_size_;
 	bool doLog_;
 	FILE *c_file_;
-	std::fstream file_;
+	//std::fstream file_;
 	IDPool<AddrType> idPool_;
 	std::ofstream wrtLog_;
 	char file_buf_[1024*1024];
@@ -764,7 +766,7 @@ AddrIterator::operator==(AddrIterator const& rhs) const
 // ------------- Pool implementation ------------
 
 Pool::Pool()
-: error_num(0), doLog_(true), idPool_(0, (1<<28)-1), onStreaming_(false)
+: error_num(0), doLog_(true), c_file_(0), idPool_(0, (1<<28)-1), onStreaming_(false)
 {
 	
 }
@@ -772,7 +774,6 @@ Pool::Pool()
 Pool::~Pool()
 {
 	wrtLog_.close();
-	file_.close();
 	fclose(c_file_);
 }
 
@@ -786,12 +787,8 @@ Pool::create_chunk_file(SizeType chunk_size, Config const & conf)
 	log(conf.pool_log);
 	chunk_size_ = chunk_size;
 	
-	// c-fop
 	if(c_file_)
 		fclose(c_file_);
-
-	if(file_.is_open())
-		file_.close();
 
 	stringstream cvt;
 	
@@ -802,16 +799,6 @@ Pool::create_chunk_file(SizeType chunk_size, Config const & conf)
 	{
 		// create chunk file
 		string name(cvt.str());
-		
-		file_.rdbuf()->pubsetbuf(file_buf_, 1024*1024);
-		file_.open(name.c_str(), ios::in | ios::out | ios::ate);
-		if(!file_.is_open()){
-			file_.open(name.c_str(), ios::in | ios::out | ios::trunc);
-			if(!file_.is_open()){
-				fprintf(stderr, "Pools initial: %s\n", strerror(errno));
-				exit(1);
-			}
-		}
 		
 		// c-fop
 		if(0 == (c_file_ = fopen(name.c_str(), "w+"))){
@@ -834,7 +821,7 @@ Pool::create_chunk_file(SizeType chunk_size, Config const & conf)
 		wrtLog_.open(name.c_str(), ios::out | ios::app);
 		if(!wrtLog_.is_open()){
 			wrtLog_.open(name.c_str(), ios_base::out | ios_base::trunc);
-			if(!file_.is_open()){
+			if(!wrtLog_.is_open()){
 				fprintf(stderr, "Pool logs initial: %s\n", strerror(errno));
 				exit(1);
 			}
@@ -884,7 +871,7 @@ Pool::seekToHeader(AddrType address)
 void
 Pool::write_log(char const *operation, 
 		AddrType const* address,
-		std::streampos tell,
+		long long tell,
 		SizeType size,
 		char const *desc,
 		int src_line)
@@ -1041,12 +1028,16 @@ Pool::append(AddrType address, char const* data, SizeType size,
 		
 		fseeko(c_file_, -8, SEEK_CUR);
 		fprintf(c_file_, "%08x", 0);
-
+		if(ferror(c_file_)){
+			write_log("appErr", &address, ftello(c_file_), ch.size + size, strerror(errno), __LINE__);
+			return -1;
+		}
+		
 		//Profiler.begin("Migration");
 		// determine next pool idx according to refHistory
 		if(pred_)
 			next_pool_idx = pred_(rh_, address, next_pool_idx);
-
+		
 		AddrType rt = next_pool_idx<<28 | next_pool[next_pool_idx].migrate(c_file_, ch, data, size);
 
 		//Profiler.end("Migration");
@@ -1245,9 +1236,16 @@ Pool::migrate(FILE* src_file, ChunkHeader ch,
 			fread(migbuf_, 1, MIGBUF_SIZ, src_file) :
 			fread(migbuf_, 1, toRead, src_file) ;
 		if(!readCnt){
-			write_log("migErr", &addr, ftello(src_file), ch.size, strerror(errno), __LINE__);
-			error_num = SYSTEM_ERROR;
-			return -1;
+			int state = fflush(src_file);
+			readCnt = (toRead >= MIGBUF_SIZ)?
+				fread(migbuf_, 1, MIGBUF_SIZ, src_file) :
+				fread(migbuf_, 1, toRead, src_file) ;
+			if(!readCnt){
+				write_log("migErr", &addr, ftello(src_file), ch.size, strerror(errno), __LINE__);
+				bool iseof = 0 != feof(src_file);
+				error_num = SYSTEM_ERROR;
+				return -1;
+			}
 		}
 		
 		if(readCnt != fwrite(migbuf_, 1, readCnt, c_file_)){ // write failure
