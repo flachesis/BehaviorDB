@@ -21,6 +21,12 @@ void verify(char const *data, size_t size)
 	printf("Tail: %s", data+size-strlen("data end"));
 }
 
+void usage()
+{
+	printf("./append n address_beg\n");
+	exit(1);	
+}
+
 /** \include append.cpp
  */
 

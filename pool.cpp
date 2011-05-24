@@ -148,9 +148,8 @@ protected:
 	 *  @remark Error Number: SYSTEM_ERROR, ADDRESS_OVERFLOW
 	 */
 	AddrType
-	migrate(std::fstream &src_file, ChunkHeader ch, 
+	migrate(FILE* src_file, ChunkHeader ch, 
 		char const *data, SizeType size); 
-
 	void
 	write_log(char const *operation, 
 		AddrType const* address,
@@ -168,6 +167,7 @@ private:
 	Config conf_;
 	SizeType chunk_size_;
 	bool doLog_;
+	FILE *c_file_;
 	std::fstream file_;
 	IDPool<AddrType> idPool_;
 	std::ofstream wrtLog_;
@@ -773,6 +773,7 @@ Pool::~Pool()
 {
 	wrtLog_.close();
 	file_.close();
+	fclose(c_file_);
 }
 
 void
@@ -784,7 +785,10 @@ Pool::create_chunk_file(SizeType chunk_size, Config const & conf)
 	conf_ = conf;
 	log(conf.pool_log);
 	chunk_size_ = chunk_size;
-
+	
+	// c-fop
+	if(c_file_)
+		fclose(c_file_);
 
 	if(file_.is_open())
 		file_.close();
@@ -798,6 +802,7 @@ Pool::create_chunk_file(SizeType chunk_size, Config const & conf)
 	{
 		// create chunk file
 		string name(cvt.str());
+		
 		file_.rdbuf()->pubsetbuf(file_buf_, 1024*1024);
 		file_.open(name.c_str(), ios::in | ios::out | ios::ate);
 		if(!file_.is_open()){
@@ -806,6 +811,17 @@ Pool::create_chunk_file(SizeType chunk_size, Config const & conf)
 				fprintf(stderr, "Pools initial: %s\n", strerror(errno));
 				exit(1);
 			}
+		}
+		
+		// c-fop
+		if(0 == (c_file_ = fopen(name.c_str(), "w+"))){
+			fprintf(stderr, "Pools initial: %s\n", strerror(errno));
+			exit(1);
+		}
+		
+		if( 0 != setvbuf(c_file_, file_buf_, _IOFBF, 1024*1024)){
+			fprintf(stderr, "Pools initial: %s\n", strerror(errno));
+			exit(1);
 		}
 		
 	}
@@ -851,9 +867,16 @@ inline Pool::chunk_size() const
 void
 Pool::seekToHeader(AddrType address)
 {
+	/*
+	// c++fop
 	std::streamoff off = (address & 0x0fffffff);
+
 	file_.seekg(off * chunk_size_, ios::beg);
 	file_.peek();
+	*/
+
+	// c-fop
+	fseeko(c_file_, (address & 0x0fffffff) * chunk_size_, SEEK_SET);
 }
 
 
@@ -902,41 +925,33 @@ Pool::put(char const* data, SizeType size)
 
 	if(onStreaming_){
 		error_num = POOL_LOCKED;
-		write_log("putErr", 0, file_.tellp(), size, "Pool locked", __LINE__);
+		write_log("putErr", 0, ftello(c_file_), size, "Pool locked", __LINE__);
 		return -1;
 	}
 
 	if(!idPool_.avail()){
-		write_log("putErr", 0, file_.tellp(), size, "IDPool overflowed", __LINE__);
+		write_log("putErr", 0, ftello(c_file_), size, "IDPool overflowed", __LINE__);
 		error_num = ADDRESS_OVERFLOW;
 		return -1; 
 	}
 	
 	AddrType addr = idPool_.Acquire();
-	std::streamoff off = addr;
-	
-	// clear() is required when previous read reach the file end
-	file_.clear();
-	file_.seekp(off * chunk_size_, ios::beg);
-	
-	
-	// write 8 bytes chunk header
+	seekToHeader(addr);
+
 	ChunkHeader ch;
 	ch.size = size;
-	file_<<ch;
-	file_.write(data, (size));
-	
-	if(!file_.good()){
+	write_header(c_file_, ch);
+	if(size !=  fwrite(data, 1, size, c_file_)){
 		idPool_.Release(addr);
-		write_log("putErr", &addr, file_.tellp(), size, strerror(errno), __LINE__);
+		write_log("putErr", &addr, ftello(c_file_), size, strerror(errno), __LINE__);
 		error_num = SYSTEM_ERROR;
 		return -1;
 	}
 	
 	// write log
-	write_log("put", &addr, file_.tellp(), size);
+	write_log("put", &addr, ftello(c_file_), size);
 	
-	return off;
+	return addr;
 }
 
 AddrType
@@ -947,43 +962,38 @@ Pool::overwrite(AddrType address, char const* data, SizeType size)
 	if(error_num)
 		return -1;
 
+	AddrType addr = address & 0x0fffffff;
+
 	if(onStreaming_){
 		error_num = POOL_LOCKED;
-		write_log("owrtErr", 0, file_.tellp(), size, "Pool locked", __LINE__);
+		write_log("owrtErr", 0, ftello(c_file_), size, "Pool locked", __LINE__);
 		return -1;
 	}
 
-	if(!idPool_.isAcquired(address & 0x0fffffff)){
-		write_log("owrtErr", 0, file_.tellp(), size, "IDPool overflowed", __LINE__);
+	if(!idPool_.isAcquired(addr)){
+		write_log("owrtErr", 0, ftello(c_file_), size, "No such address", __LINE__);
 		error_num = NON_EXIST;
 		return -1; 
 	}
 	
-	AddrType addr = address & 0x0fffffff;
-	std::streamoff off = addr;
-	
-	// clear() is required when previous read reach the file end
-	file_.clear();
-	file_.seekp(off * chunk_size_, ios::beg);
-	
+	seekToHeader(addr);
 	
 	// write 8 bytes chunk header
 	ChunkHeader ch;
 	ch.size = size;
-	file_<<ch;
-	file_.write(data, (size));
+	write_header(c_file_, ch);
 	
-	if(!file_.good()){
+	if(size !=  fwrite(data, 1, size, c_file_)){
 		idPool_.Release(addr);
-		write_log("owrtErr", &addr, file_.tellp(), size, strerror(errno), __LINE__);
+		write_log("owrtErr", &addr, ftello(c_file_), size, strerror(errno), __LINE__);
 		error_num = SYSTEM_ERROR;
 		return -1;
 	}
 	
 	// write log
-	write_log("owrt", &addr, file_.tellp(), size);
-	
-	return off;
+	write_log("owrt", &addr, ftello(c_file_), size);
+		
+	return addr;
 }
 
 AddrType 
@@ -999,7 +1009,7 @@ Pool::append(AddrType address, char const* data, SizeType size,
 	
 	if(onStreaming_){
 		error_num = POOL_LOCKED;
-		write_log("appErr", &address, file_.tellg(), size, "Pool locked", __LINE__);
+		write_log("appErr", &address, ftello(c_file_), size, "Pool locked", __LINE__);
 		return -1;
 	}
 	
@@ -1015,47 +1025,30 @@ Pool::append(AddrType address, char const* data, SizeType size,
 		seekToHeader(address);
 		//Profiler.end("SeekHeader");
 		//Profiler.begin("ReadHeader");
-		file_>>ch;
-		
+		read_header(c_file_, ch);
 		//Profiler.end("ReadHeader");
 	}
 	
-	if(!file_){
-		write_log("appErr", &address, file_.tellg(), ch.size + size, strerror(errno), __LINE__);
+
+	if(ferror(c_file_)){
+		write_log("appErr", &address, ftello(c_file_), ch.size + size, strerror(errno), __LINE__);
 		return -1;
 	}
 
-	if(ch.size + size > chunk_size_ ){//|| ch.liveness == conf_.migrate_threshold){ // need to migration
-		
-		/*
-		// migrate to larger pool early
-		// when the chunk is appended 127 times
-		if(next_pool_idx < 15 && ch.liveness == conf_.migrate_threshold)
-			next_pool_idx++;
-
-		if( ch.size + size > next_pool[next_pool_idx].chunk_size() ){ // no pool for migration
-			write_log("appErr", &address, file_.tellg(), ch.size + size, "Exceed supported chunk size", __LINE__);
-			error_num = DATA_TOO_BIG;
-			return -1;	
-		}
-		*/
-
-		// true migration
-		//if(next_pool_idx != address >> 28){
+	if(ch.size + size > chunk_size_ ){
 
 		// erase old header
-		file_.clear();
-		file_.seekp(-8, ios::cur);
-		//seekToHeader(address);
-		file_.write("00000000", 8);
-		file_.tellg(); // without this line, read will fail(why?)
-		file_.sync();
+		
+		fseek(c_file_, -8, SEEK_CUR);
+		fprintf(c_file_, "%08x", 0);
 
 		//Profiler.begin("Migration");
 		// determine next pool idx according to refHistory
 		if(pred_)
 			next_pool_idx = pred_(rh_, address, next_pool_idx);
-		AddrType rt = next_pool_idx<<28 | next_pool[next_pool_idx].migrate(file_, ch, data, size);
+
+		AddrType rt = next_pool_idx<<28 | next_pool[next_pool_idx].migrate(c_file_, ch, data, size);
+
 		//Profiler.end("Migration");
 		if(-1 == rt && next_pool->error_num != 0){ // migration failed
 			error_num = next_pool->error_num;
@@ -1066,37 +1059,31 @@ Pool::append(AddrType address, char const* data, SizeType size,
 		idPool_.Release(address & 0x0fffffff);
 		//Profiler.end("Pool Append");
 		return rt;
-		//}
 	}
 	
 	//Profiler.begin("Normal Append");
 	// update header
 	ch.size += size;
-	// ch.liveness++;
 	
-	file_.clear();
-	file_.seekp(-8, ios::cur);
-	
-	file_<<ch;
-	
-	if(!file_){
-		write_log("appErr", &address, file_.tellp(), ch.size + size, "Write header error", __LINE__);
+	fseek(c_file_, -8, SEEK_CUR);
+	write_header(c_file_, ch);
+
+	if(ferror(c_file_)){
+		write_log("appErr", &address, ftello(c_file_), ch.size + size, strerror(errno), __LINE__);
 		return -1;
 	}
-
+	
 	// append data
-	file_.seekp(ch.size - size, ios::cur);
-	file_.write(data, size);
-
-	if(!file_){ // write failed
-		write_log("appErr", &address, file_.tellp(), size, strerror(errno), __LINE__);
+	fseek(c_file_, ch.size - size, SEEK_CUR);
+	if(size !=  fwrite(data, 1, size, c_file_)){
+		write_log("appErr", &address, ftello(c_file_), size, strerror(errno), __LINE__);
 		error_num = SYSTEM_ERROR;
 		return -1;
 	}
-	
 
 	// write log
-	write_log("append", &address, file_.tellg(), ch.size);
+	write_log("append", &address, ftello(c_file_), ch.size);
+	
 	//Profiler.end("Normal Append");
 	//Profiler.end("Pool Append");
 	return address;		
@@ -1111,7 +1098,7 @@ Pool::get(char *output, SizeType const size, AddrType address)
 	
 	if(onStreaming_){
 		error_num = POOL_LOCKED;
-		write_log("getErr", &address, file_.tellg(), size, "Pool locked", __LINE__);
+		write_log("getErr", &address, ftello(c_file_), size, "Pool locked", __LINE__);
 		return -1;
 	}
 
@@ -1121,27 +1108,26 @@ Pool::get(char *output, SizeType const size, AddrType address)
 	
 	ChunkHeader ch;
 	seekToHeader(address);
-	file_>>ch;
-	if(!file_){
-		write_log("getErr", &address, file_.tellg(), ch.size + size, "Read header error", __LINE__);
+	
+	read_header(c_file_, ch);
+	if(ferror(c_file_)){	
+		write_log("getErr", &address, ftello(c_file_), ch.size + size, "Read header error", __LINE__);
 		return -1;
 	}
-
 
 	if(ch.size > size){
 		error_num = DATA_TOO_BIG;
 		return ch.size;
 	}
 	
-	file_.read(output, ch.size);
-
-	if(ch.size != file_.gcount()){ // read failure
-		write_log("getErr", &address, file_.tellg(), ch.size, strerror(errno), __LINE__);
+	if(ch.size != fread(output, 1, ch.size, c_file_)){
+		write_log("getErr", &address, ftello(c_file_), ch.size, strerror(errno), __LINE__);
 		error_num = SYSTEM_ERROR;
 		return -1;
 	}
+	
 	// write log
-	write_log("get", &address, file_.tellg(), ch.size);
+	write_log("get", &address, ftello(c_file_), ch.size);
 	
 	return size;
 
@@ -1157,7 +1143,7 @@ Pool::get(char *output, SizeType const size, AddrType address, StreamState* stre
 	if(!stream->left_){ // first read
 		if(onStreaming_){
 			error_num = POOL_LOCKED;
-			write_log("getErr", &address, file_.tellg(), size, "Pool locked", __LINE__);
+			write_log("getErr", &address, ftello(c_file_), size, "Pool locked", __LINE__);
 			return -1;
 		}
 		
@@ -1169,9 +1155,10 @@ Pool::get(char *output, SizeType const size, AddrType address, StreamState* stre
 
 		ChunkHeader ch;
 		seekToHeader(address);
-		file_>>ch;
-		if(!file_){
-			write_log("getErr", &address, file_.tellg(), ch.size + size, "Read header error", __LINE__);
+		read_header(c_file_, ch);
+
+		if(ferror(c_file_)){
+			write_log("getErr", &address, ftello(c_file_), ch.size + size, "Read header error", __LINE__);
 			return -1;
 		}
 
@@ -1180,10 +1167,8 @@ Pool::get(char *output, SizeType const size, AddrType address, StreamState* stre
 	
 	SizeType toRead = (size >= stream->left_) ? stream->left_ : size;
 	
-	file_.read(output, toRead);
-
-	if(toRead != file_.gcount()){ // read failure
-		write_log("getErr", &address, file_.tellg(), toRead, strerror(errno), __LINE__);
+	if(toRead != fread(output, 1, toRead, c_file_)){ // read failure
+		write_log("getErr", &address,ftello(c_file_), toRead, strerror(errno), __LINE__);
 		error_num = SYSTEM_ERROR;
 		return -1;
 	}
@@ -1191,7 +1176,7 @@ Pool::get(char *output, SizeType const size, AddrType address, StreamState* stre
 	stream->left_ -= toRead;
 	
 	// write log
-	write_log("get", &address, file_.tellg(), toRead);
+	write_log("get", &address, ftello(c_file_), toRead);
 	
 	// Unlock this pool
 	if(!stream->left_){
@@ -1212,13 +1197,14 @@ Pool::del(AddrType address)
 	idPool_.Release(address&0x0fffffff);
 
 	// write log
-	write_log("del", &address, file_.tellg());
+	write_log("del", &address, ftello(c_file_));
 
 	return address;
 }
 
+
 AddrType
-Pool::migrate(std::fstream &src_file, ChunkHeader ch, 
+Pool::migrate(FILE* src_file, ChunkHeader ch, 
 	char const *data, SizeType size)
 {
 	clear_error();
@@ -1231,60 +1217,56 @@ Pool::migrate(std::fstream &src_file, ChunkHeader ch,
 	
 	ChunkHeader ch_new;
 	ch_new.size = ch.size + size;
-	// ch_new.liveness = ch_new.liveness>>(chunk_size_>>conf_.chunk_unit);
 
 	if(!idPool_.avail()){
-		write_log("migErr", 0, file_.tellp(), size, "IDPool overflowed", __LINE__);
+		write_log("migErr", 0, ftello(c_file_), size, "IDPool overflowed", __LINE__);
 		error_num = ADDRESS_OVERFLOW;
 		return -1;
 	}
 	
 	AddrType addr = idPool_.Acquire();
 	std::streamoff off = addr;
-
-	// clear() is required when previous read reach the file end
-	file_.clear();
-	file_.seekp(off * chunk_size_, ios::beg);
 	
+	seekToHeader(addr);
+
 	// write header
-	file_<<ch_new;
-	if(!file_){
-		write_log("migErr", 0, file_.tellp(), size, "Write header error", __LINE__);
+	write_header(c_file_, ch_new);
+	
+	if(ferror(c_file_)){
+		write_log("migErr", 0, ftello(c_file_), size, "Write header error", __LINE__);
 		error_num = SYSTEM_ERROR;
 		return -1;
 	}
-	
+
 	SizeType toRead = ch.size;
-
+	SizeType readCnt(0);
 	while(toRead){
-		(toRead >= MIGBUF_SIZ)?
-			src_file.read(migbuf_, MIGBUF_SIZ) :
-			src_file.read(migbuf_, toRead);
-		if(!src_file.gcount()){
-			write_log("migErr", &addr, src_file.tellg(), ch.size, strerror(errno), __LINE__);
+		readCnt = (toRead >= MIGBUF_SIZ)?
+			fread(migbuf_, 1, MIGBUF_SIZ, src_file) :
+			fread(migbuf_, 1, toRead, src_file) ;
+		if(!readCnt){
+			write_log("migErr", &addr, ftello(src_file), ch.size, strerror(errno), __LINE__);
 			error_num = SYSTEM_ERROR;
 			return -1;
 		}
-		file_.write(migbuf_, src_file.gcount());
-		if(!file_){ // write failure
-			write_log("migErr", &addr, file_.tellp(), ch.size, strerror(errno), __LINE__);
+		
+		if(readCnt != fwrite(migbuf_, 1, readCnt, c_file_)){ // write failure
+			write_log("migErr", &addr, ftello(c_file_), ch.size, strerror(errno), __LINE__);
 			error_num = SYSTEM_ERROR;
 			return -1;
 		}
-		toRead -= src_file.gcount();
+		toRead -= readCnt;
+		readCnt = 0;
 	}
-
-
-	file_.write(data, size);
-	if(!file_){ // write failure
-		write_log("migErr", &addr, file_.tellp(), size, strerror(errno), __LINE__);
+	
+	if(size != fwrite(data, 1, size, c_file_)){ // write failure
+		write_log("migErr", &addr, ftello(c_file_), size, strerror(errno), __LINE__);
 		error_num = SYSTEM_ERROR;
 		return -1;
 	}
 	
 	// write log
-	write_log("migrate", &addr, file_.tellp(), ch_new.size);
+	write_log("migrate", &addr, ftello(c_file_), ch_new.size);
 	
 	return addr;
 }
-

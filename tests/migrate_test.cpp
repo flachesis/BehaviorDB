@@ -29,6 +29,7 @@ int main()
 	create("2k head", data_2k, 2048);
 	
 	Config conf;
+	conf.pool_log = false;
 	conf.migrate_threshold = 0x40;
 
 	BehaviorDB bdb(conf);

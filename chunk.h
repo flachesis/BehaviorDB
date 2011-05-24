@@ -22,6 +22,11 @@ operator>>(std::istream& is, ChunkHeader & ch);
 std::ostream& 
 operator<<(std::ostream& os, ChunkHeader const& ch);
 
+void
+write_header(FILE* fp, ChunkHeader const &ch);
+
+void
+read_header(FILE* fp, ChunkHeader &ch);
 
 #endif
 
