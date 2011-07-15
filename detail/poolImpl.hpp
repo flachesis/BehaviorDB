@@ -2,6 +2,7 @@
 #define _POOL_HPP_
 
 #include "common.hpp"
+#include "error.hpp"
 #include "addr_eval.hpp"
 #include "fixedPool.hpp"
 #include "chunk.h"
@@ -12,12 +13,14 @@
 
 #define MIGBUF_SIZ 2*1024*1024
 
-template<typename T> 
-class IDPool;
+
 
 namespace BDB
 {
-	
+	template<typename T> 
+	class IDPool;
+
+
 	struct viov;
 
 	/// pool manager
@@ -54,7 +57,7 @@ namespace BDB
 		 *  @return Address
 		 */
 		AddrType
-		write(char const* data, size_t size);
+		write(char const* data, size_t size, error_code* ec=0);
 		
 		// off=-1 represent an append write
 		AddrType

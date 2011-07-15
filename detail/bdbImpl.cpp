@@ -6,6 +6,7 @@
 #include "stat.hpp"
 #include <cassert>
 #include <stdexcept>
+#include "error.hpp"
 
 namespace BDB {
 
@@ -75,19 +76,21 @@ namespace BDB {
 	}
 	
 	AddrType
-	BDBImpl::put(char const *data, size_t size)
+	BDBImpl::put(char const *data, size_t size, error_code* ec)
 	{
 		assert(0 != *this && "BDBImpl is not proper initiated");
 
 		unsigned int dir = addrEval::directory(size);
 		AddrType rt(0);
 		while(dir < addrEval::dir_count()){
-			rt = pools_[dir].write(data, size);
-			if(rt != -1)	break;
+			ec->clear();
+			rt = pools_[dir].write(data, size, ec);
+			if(!*ec)	break;
 			dir++;
 		}
 		
-		if(-1 == rt){
+		if(*ec){
+			/// TODO modify BDBImpl::error() to accomondate error_code
 			error(dir-1);
 			return -1;
 		}

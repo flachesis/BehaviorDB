@@ -5,15 +5,16 @@
 #include <string>
 #include "common.hpp"
 #include "addr_eval.hpp"
-
-template<typename B, typename V>
-class IDValPool;
+#include "error.hpp"
 
 namespace BDB {
 	
+	template<typename B, typename V>
+	class IDValPool;
+
 	struct pool;
 	struct AddrIterator;	
-
+	
 	struct BDBImpl 
 	{
 		friend struct bdbStater;
@@ -33,17 +34,17 @@ namespace BDB {
 		 *  @return Global address
 		 */
 		AddrType
-		put(char const *data, size_t size);
+		put(char const *data, size_t size, error_code *ec=0);
 
 		AddrType
-		put(char const *data, size_t size, AddrType addr, size_t off=-1);
+		put(char const *data, size_t size, AddrType addr, size_t off=npos);
 		
 		AddrType
 		put(std::string const& data)
 		{ return put(data.data(), data.size()); }
 		
 		AddrType
-		put(std::string const& data, AddrType addr, size_t off=-1)
+		put(std::string const& data, AddrType addr, size_t off=npos)
 		{ return put(data.data(), data.size(), addr, off); }
 		
 		AddrType

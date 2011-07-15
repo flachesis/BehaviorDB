@@ -3,13 +3,13 @@
 
 #include "common.hpp"
 
-template <typename T>
-class IDPool;
-
-template <typename T, typename U>
-class IDValPool;
-
 namespace BDB {
+
+	template <typename T>
+	class IDPool;
+
+	template <typename T, typename U>
+	class IDValPool;
 
 	struct BDBImpl;
 	struct pool;

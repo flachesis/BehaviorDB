@@ -64,7 +64,7 @@ namespace BDB {
 	}
 	
 	AddrType
-	pool::write(char const* data, size_t size)
+	pool::write(char const* data, size_t size, error_code* ec)
 	{
 		assert(0 != *this && "pool is not proper initiated");
 		
@@ -75,8 +75,10 @@ namespace BDB {
 		}
 		
 		assert(true == addrEval::capacity_test(dirID, size));
+		
+		AddrType loc_addr = idPool_->Acquire(ec);
+		if(*ec) return -1;
 
-		AddrType loc_addr = idPool_->Acquire();
 		ChunkHeader header;
 		header.size = size;
 		

@@ -10,12 +10,15 @@ else()
 endif()
 
 include_directories( ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/bdb /usr/local/include )
+link_directories ( /usr/local/lib )
 
 add_library( bdb ${LIB_TYPE}
 	common.cpp chunk.cpp 
 	v_iovec.cpp poolImpl.cpp 
 	addr_iter.cpp bdbImpl.cpp 
 	error.cpp bdb.cpp stat.cpp)
+
+target_link_libraries( bdb boost_system )
 
 install (TARGETS bdb DESTINATION lib EXPORT bdb-targets )
 install (EXPORT bdb-targets DESTINATION lib)
