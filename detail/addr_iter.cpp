@@ -1,7 +1,7 @@
 #include <stdexcept>
 #include "addr_iter.hpp"
-#include "idPool.hpp"
 #include "bdbImpl.hpp"
+#include "idPool.hpp"
 #include "addr_eval.hpp"
 
 namespace BDB {

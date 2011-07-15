@@ -2,7 +2,6 @@
 #define _POOL_HPP_
 
 #include "common.hpp"
-#include "error.hpp"
 #include "addr_eval.hpp"
 #include "fixedPool.hpp"
 #include "chunk.h"
@@ -19,7 +18,6 @@ namespace BDB
 {
 	template<typename T> 
 	class IDPool;
-
 
 	struct viov;
 

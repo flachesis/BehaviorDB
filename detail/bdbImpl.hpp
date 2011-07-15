@@ -5,12 +5,20 @@
 #include <string>
 #include "common.hpp"
 #include "addr_eval.hpp"
-#include "error.hpp"
+
+namespace boost {
+	namespace system {
+		class error_code;
+	}	
+} // end of namespace boost
+
 
 namespace BDB {
 	
 	template<typename B, typename V>
 	class IDValPool;
+	
+	using boost::system::error_code;
 
 	struct pool;
 	struct AddrIterator;	
