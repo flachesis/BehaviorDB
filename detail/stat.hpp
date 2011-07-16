@@ -5,10 +5,8 @@
 
 namespace BDB {
 
-	template <typename T>
 	class IDPool;
 
-	template <typename T, typename U>
 	class IDValPool;
 
 	struct BDBImpl;
@@ -25,10 +23,10 @@ namespace BDB {
 		operator()(pool const *pool) const;
 		
 		void
-		operator()( IDPool<AddrType> const *idp) const;
+		operator()( IDPool const *idp) const;
 
 		void
-		operator()( IDValPool<AddrType, AddrType> const *idvp) const;
+		operator()( IDValPool const *idvp) const;
 
 		Stat *s;
 	};

@@ -19,12 +19,12 @@ namespace BDB {
 
 	/** @brief Integer ID manager within bitmap storage.
 	 */
-	template<typename BlockType = unsigned int>
 	class IDPool
 	{
-		friend struct bdbStater;
 
+		friend struct bdbStater;
 	protected:
+		typedef AddrType BlockType;
 		typedef boost::dynamic_bitset<BlockType> Bitmap;
 		typedef error_code ECType;
 	public:
@@ -49,7 +49,7 @@ namespace BDB {
 		 * (beg,  numeric_limits<BlockType>::max() - 1]. 
 		 * @throw std::bad_alloc
 		 */
-		IDPool(char const* trans_file, BlockType beg);
+		IDPool(char const* trans_file, AddrType beg);
 
 		/** Constructor for being given begin and end
 		 * @desc Construct a IDPool that manages numerical ID.
@@ -62,7 +62,7 @@ namespace BDB {
 		 * (beg, end]. 
 		 * @throw std::bad_alloc
 		 */	
-		IDPool(char const* trans_file, BlockType beg, BlockType end);
+		IDPool(char const* trans_file, AddrType beg, AddrType end);
 		
 		~IDPool();
 
@@ -72,13 +72,13 @@ namespace BDB {
 		 *  @param id
 		 */
 		bool 
-		isAcquired(BlockType const& id) const;
+		isAcquired(AddrType const& id) const;
 
 		/** Acquire an ID from a IDPool.
 		 * @throw A write transaction error of type 
 		 * std::runtime_error.
 		 */
-		BlockType 
+		AddrType 
 		Acquire(ECType *ec=0);
 		
 		/** Release an ID
@@ -86,7 +86,7 @@ namespace BDB {
 		 *  std::runtime_error
 		 */
 		int 
-		Release(BlockType const &id, ECType *ec=0);
+		Release(AddrType const &id, ECType *ec=0);
 
 		//bool 
 		//avail() const;
@@ -95,19 +95,19 @@ namespace BDB {
 		 * @param curID Current ID
 		 * @remark The curID will be tested also.
 		 */
-		BlockType 
-		next_used(BlockType curID) const;
+		AddrType 
+		next_used(AddrType curID) const;
 
-		BlockType
+		AddrType
 		max_used() const;
 
 		size_t 
 		size() const;
 				
-		BlockType begin() const
+		AddrType begin() const
 		{ return beg_; }
 
-		BlockType end() const
+		AddrType end() const
 		{ return end_; }
 		
 		size_t
@@ -124,59 +124,57 @@ namespace BDB {
 		write(char const *data, size_t size, error_code *ec);
 
 		void extend();
-		IDPool(BlockType beg, BlockType end);
+		IDPool(AddrType beg, AddrType end);
 
 	private:
 		IDPool(IDPool const &cp);
 		IDPool& operator=(IDPool const &cp);
 	protected:
 
-		BlockType const beg_, end_;
+		AddrType const beg_, end_;
 		FILE*  file_;
 		Bitmap bm_;
 		bool full_alloc_;
-		BlockType max_used_;
+		AddrType max_used_;
 	};
 
-	/** @brief Extend IDPool<B> for associating a value with a ID.
+	/** @brief Extend IDPool<B> for associating a value with an ID.
 	 */
-	template<typename BlockType, typename ValueType>
-	class IDValPool : public IDPool<BlockType>
+	class IDValPool : public IDPool
 	{
 		friend struct bdbStater;
-		typedef IDPool<BlockType> super;
+		typedef IDPool super;
 	public:
-		IDValPool(char const* trans_file, BlockType beg, BlockType end);
+		IDValPool(char const* trans_file, AddrType beg, AddrType end);
 		~IDValPool();
 		
 		/** Acquire an ID and associate a value with the ID
 		 * @param val
 		 * @return ID
 		 */
-		BlockType Acquire(ValueType const &val);
+		AddrType Acquire(AddrType const &val);
 		
 		/** Find value by ID
 		 * @param id
 		 * @pre id exists in an IDValPool (Test it by isAcquire())
 		 * @return Associated value
 		 */
-		ValueType Find(BlockType const &id) const;
+		AddrType Find(AddrType const &id) const;
 		
 		/** Update value by ID
 		 * @param id
 		 * @param val
 		 * @pre id exists in an IDValPool (Test it by isAcquire())
 		 */
-		void Update(BlockType const& id, ValueType const &val);
+		void Update(AddrType const& id, AddrType const &val);
 
 		void replay_transaction(char const* transaction_file);
 
 		// size_t block_size() const;
 	private:
-		ValueType* arr_;
+		AddrType* arr_;
 	};
 } // end of namespace BDB
-#include "idPool.tcc"
 
 #endif
 

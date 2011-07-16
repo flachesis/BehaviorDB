@@ -10,7 +10,6 @@
 
 namespace BDB {
 	
-	template<typename B, typename V>
 	class IDValPool;
 	
 	struct pool;
@@ -95,7 +94,7 @@ namespace BDB {
 		FILE* log_;
 		char log_buf_[256];
 
-		IDValPool<AddrType, AddrType> *global_id_;
+		IDValPool *global_id_;
 
 	};
 

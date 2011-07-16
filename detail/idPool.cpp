@@ -1,8 +1,9 @@
+#include "idPool.hpp"
+
 namespace BDB { 
 
-	template<typename B>
 	int
-	IDPool<B>::write(char const* data, size_t size, error_code *ec)
+	IDPool::write(char const* data, size_t size, error_code *ec)
 	{
 		using namespace boost::system;
 		errno = 0;
@@ -17,19 +18,19 @@ namespace BDB {
 		return 0;
 	}
 
-	template<typename B>
-	IDPool<B>::IDPool()
+	
+	IDPool::IDPool()
 	: beg_(0), end_(0), file_(0), bm_(), full_alloc_(false), max_used_(0)
 	{}
 
-	template<typename B>
-	IDPool<B>::IDPool(char const* tfile, B beg)
-	: beg_(beg), end_(std::numeric_limits<B>::max()-1), 
+	
+	IDPool::IDPool(char const* tfile, AddrType beg)
+	: beg_(beg), end_(std::numeric_limits<AddrType>::max()-1), 
 	file_(0), bm_(), full_alloc_(false), max_used_(0)
 	{
 		assert( 0 != tfile );
 		assert( beg_ <= end_ );
-		assert((B)-1 > end_);
+		assert((AddrType)-1 > end_);
 
 		bm_.resize(4096, true);
 		
@@ -37,13 +38,13 @@ namespace BDB {
 		init_transaction(tfile);
 	}
 
-	template<typename B>
-	IDPool<B>::IDPool(char const* tfile, B beg, B end)
+	
+	IDPool::IDPool(char const* tfile, AddrType beg, AddrType end)
 	: beg_(beg), end_(end), file_(0), bm_(), full_alloc_(true), max_used_(0)
 	{
 		assert(0 != tfile);
 		assert( beg_ <= end_ );	
-		assert((B)-1 > end_);
+		assert((AddrType)-1 > end_);
 
 		bm_.resize(end_- beg_, true);
 		
@@ -51,28 +52,28 @@ namespace BDB {
 		init_transaction(tfile);
 	}
 
-	template<typename B>
-	IDPool<B>::IDPool(B beg, B end)
+	
+	IDPool::IDPool(AddrType beg, AddrType end)
 	: beg_(beg), end_(end), file_(0), bm_(), full_alloc_(true), max_used_(0)
 	{
 		assert(end >= beg);
 		bm_.resize(end_- beg_, true);
 	}
 
-	template<typename B>
-	IDPool<B>::~IDPool()
+	
+	IDPool::~IDPool()
 	{ if(file_) fclose(file_); }
 
-	template<typename B>
-	IDPool<B>::operator void const*() const
+	
+	IDPool::operator void const*() const
 	{
 		if(!this || !file_) return 0;
 		return this;
 	}
 
-	template<typename B>
+	
 	bool 
-	IDPool<B>::isAcquired(B const& id) const
+	IDPool::isAcquired(AddrType const& id) const
 	{ 
 		if(id - beg_ >= bm_.size()) 
 			return false;
@@ -80,16 +81,16 @@ namespace BDB {
 
 	}
 
-	template<typename B>
-	B
-	IDPool<B>::Acquire(ECType* ec)
+	
+	AddrType
+	IDPool::Acquire(ECType* ec)
 	{
 		using namespace boost::system;
 
 		assert(0 != this);
 		//assert(0 != ec);
 		
-		B rt;
+		AddrType rt;
 		
 		// extend bitmap
 		if(Bitmap::npos == (rt = bm_.find_first())){
@@ -115,9 +116,9 @@ namespace BDB {
 		return 	beg_ + rt;
 	}
 		
-	template<typename B>
+	
 	int
-	IDPool<B>::Release(B const &id, ECType *ec)
+	IDPool::Release(AddrType const &id, ECType *ec)
 	{
 		assert(0 != this);
 		
@@ -139,18 +140,8 @@ namespace BDB {
 		return 0;
 	}
 
-	/*
-	template<typename B>
-	bool 
-	IDPool<B>::avail() const
-	{ 
-		return bm_.any();
-	}
-	*/
-
-	template<typename B>
-	B
-	IDPool<B>::next_used(B curID) const
+	AddrType
+	IDPool::next_used(AddrType curID) const
 	{
 		if(curID >= end_ ) return end_;
 		while(curID != end_){
@@ -161,19 +152,19 @@ namespace BDB {
 		return curID;
 	}
 
-	template<typename B>
-	B
-	IDPool<B>::max_used() const
+	
+	AddrType
+	IDPool::max_used() const
 	{ return max_used_; }
 
-	template<typename B>
+	
 	size_t
-	IDPool<B>::size() const
+	IDPool::size() const
 	{ return bm_.size(); }
 
-	template<typename B>
+	
 	void 
-	IDPool<B>::replay_transaction(char const* transaction_file)
+	IDPool::replay_transaction(char const* transaction_file)
 	{
 		assert(0 != transaction_file);
 
@@ -185,7 +176,7 @@ namespace BDB {
 			return;
 
 		char line[21] = {0};		
-		B id;
+		AddrType id;
 		while(fgets(line, 20, tfile)){
 			line[strlen(line)-1] = 0;
 			id = strtoul(&line[1], 0, 10);
@@ -205,9 +196,9 @@ namespace BDB {
 		fclose(tfile);
 	}
 
-	template<typename B>
+	
 	void 
-	IDPool<B>::init_transaction(char const* transaction_file)
+	IDPool::init_transaction(char const* transaction_file)
 	{
 		
 		assert(0 != transaction_file);
@@ -222,14 +213,14 @@ namespace BDB {
 	}
 
 
-	template<typename B>
-	size_t IDPool<B>::num_blocks() const
+	
+	size_t IDPool::num_blocks() const
 	{ return bm_.num_blocks(); }
 
-	template<typename B>
-	void IDPool<B>::extend()
+	
+	void IDPool::extend()
 	{ 
-		typename Bitmap::size_type size = bm_.size();
+		Bitmap::size_type size = bm_.size();
 		size = (size<<1) -  (size>>1);
 
 		if( size < bm_.size() || size >= end_ - beg_)
@@ -240,29 +231,29 @@ namespace BDB {
 
 	// ------------ IDValPool Impl ----------------
 
-	template<typename B, typename V>
-	IDValPool<B,V>::IDValPool(char const* tfile, B beg, B end)
+	
+	IDValPool::IDValPool(char const* tfile, AddrType beg, AddrType end)
 	: super(beg, end), arr_(0)
 	{
-		arr_ = new V[end - beg];
+		arr_ = new AddrType[end - beg];
 		if(!arr_) throw std::bad_alloc();
 
 		replay_transaction(tfile);
 		super::init_transaction(tfile);
 	}
 
-	template<typename B, typename V>
-	IDValPool<B,V>::~IDValPool()
+	
+	IDValPool::~IDValPool()
 	{
 		delete [] arr_;	
 	}
 
-	template<typename B, typename V>
-	B IDValPool<B,V>::Acquire(V const &val)
+	
+	AddrType IDValPool::Acquire(AddrType const &val)
 	{
 		if(!*this) return -1;
 
-		B rt;
+		AddrType rt;
 		
 		if( super::Bitmap::npos == (rt = super::bm_.find_first()) )
 			return -1;
@@ -283,16 +274,16 @@ namespace BDB {
 		return 	super::beg_ + rt;
 	}
 
-	template<typename B, typename V>
-	V IDValPool<B,V>::Find(B const & id) const
+	
+	AddrType IDValPool::Find(AddrType const & id) const
 	{
 		assert(true == super::isAcquired(id) && "IDValPool: Test isAcquired before Find!");
 		return arr_[ id - super::beg_ ];
 	}
 
 
-	template<typename B, typename V>
-	void IDValPool<B,V>::Update(B const& id, V const& val)
+	
+	void IDValPool::Update(AddrType const& id, AddrType const& val)
 	{
 		assert(true == super::isAcquired(id) && "IDValPool: Test isAcquired before Update!");
 		
@@ -308,8 +299,8 @@ namespace BDB {
 
 	}
 
-	template<typename B, typename V>
-	void IDValPool<B,V>::replay_transaction(char const* transaction_file)
+	
+	void IDValPool::replay_transaction(char const* transaction_file)
 	{
 		assert(0 != transaction_file);
 		assert(0 == super::file_ && "disallow replay when file_ has been initiated");
@@ -321,8 +312,8 @@ namespace BDB {
 		
 
 		char line[21] = {0};		
-		B id; 
-		V val;
+		AddrType id; 
+		AddrType val;
 		std::stringstream cvt;
 		while(fgets(line, 20, tfile)){
 			line[strlen(line)-1] = 0;

@@ -16,7 +16,6 @@
 
 namespace BDB
 {
-	template<typename T> 
 	class IDPool;
 
 	struct viov;
@@ -136,7 +135,7 @@ namespace BDB
 		char mig_buf_[MIGBUF_SIZ];
 	private:	
 		// id file
-		IDPool<AddrType> *idPool_;
+		IDPool *idPool_;
 
 		// header
 		fixed_pool<ChunkHeader, 8> headerPool_;
