@@ -1,17 +1,8 @@
 #ifndef _IDPOOL_HPP
 #define _IDPOOL_HPP
 
-#include <stdexcept>
-#include <limits>
-#include <cstdlib>
-#include <cstring>
-#include <cstdio>
-#include <cerrno>
-#include <cassert>
-#include <sstream>
 #include "boost/dynamic_bitset.hpp"
 #include "common.hpp"
-#include "error.hpp"
 
 namespace BDB {
 
@@ -19,6 +10,7 @@ namespace BDB {
 
 	/** @brief Integer ID manager within bitmap storage.
 	 */
+
 	class IDPool
 	{
 

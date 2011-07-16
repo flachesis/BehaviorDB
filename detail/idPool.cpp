@@ -1,5 +1,15 @@
 #include "idPool.hpp"
 
+#include <stdexcept>
+#include <limits>
+#include <cstdlib>
+#include <cstring>
+#include <cstdio>
+#include <cerrno>
+#include <cassert>
+#include <sstream>
+#include "error.hpp"
+
 namespace BDB { 
 
 	int
