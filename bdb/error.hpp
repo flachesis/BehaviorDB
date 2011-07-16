@@ -40,13 +40,14 @@ namespace BDB  {
 	
 
 	namespace bdb_errc {
-		enum {
+		enum errc_t{
 			idpool_no_space = 1,
 			idpool_disk_failure,
 			idpool_alloc_failure
 		};
 	} // end of namespace BDB_ERROR
 	
+
 	class bdb_category_impl
 	: public error_category
 	{
@@ -64,13 +65,24 @@ namespace BDB  {
 	error_category const& 
 	bdb_error_category();
 
-	error_code 
-	make_error_code(int e);
-
-	error_condition
-	make_error_condition(int e);
+	
 
 
 } // end of namespace BDB
+
+
+namespace boost {
+	namespace system {
+		template<> struct is_error_condition_enum<BDB::bdb_errc::errc_t>
+		{ enum{value = true}; };
+		
+		error_code 
+		make_error_code(int e);
+
+		error_condition
+		make_error_condition(int e);
+
+	}
+}
 
 #endif // end of header

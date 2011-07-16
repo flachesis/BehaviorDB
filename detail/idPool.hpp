@@ -25,7 +25,7 @@ namespace BDB {
 		friend struct bdbStater;
 
 	protected:
-		typedef boost::dynamic_bitset<> Bitmap;
+		typedef boost::dynamic_bitset<BlockType> Bitmap;
 		typedef error_code ECType;
 	public:
 
@@ -88,8 +88,8 @@ namespace BDB {
 		int 
 		Release(BlockType const &id, ECType *ec=0);
 
-		bool 
-		avail() const;
+		//bool 
+		//avail() const;
 		
 		/** Find the first acquired ID from curID which is included
 		 * @param curID Current ID
@@ -103,13 +103,7 @@ namespace BDB {
 
 		size_t 
 		size() const;
-		
-		void 
-		replay_transaction(char const* transaction_file);
-		
-		void 
-		init_transaction(char const* transaction_file);
-		
+				
 		BlockType begin() const
 		{ return beg_; }
 
@@ -120,7 +114,15 @@ namespace BDB {
 		num_blocks() const;
 		
 	protected:
+		void 
+		replay_transaction(char const* transaction_file);
 		
+		void 
+		init_transaction(char const* transaction_file);
+
+		int 
+		write(char const *data, size_t size, error_code *ec);
+
 		void extend();
 		IDPool(BlockType beg, BlockType end);
 

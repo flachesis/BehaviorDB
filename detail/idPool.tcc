@@ -1,11 +1,26 @@
 namespace BDB { 
 
 	template<typename B>
+	int
+	IDPool<B>::write(char const* data, size_t size, error_code *ec)
+	{
+		using namespace boost::system;
+		errno = 0;
+		if(size !=  fwrite(data, 1, size, file_)){
+			ECType ec_tmp = error_code(errno, system_category());
+			if(errc::no_space_on_device == ec_tmp)
+				*ec = make_error_code(bdb_errc::idpool_no_space);
+			else
+				*ec = make_error_code(bdb_errc::idpool_disk_failure);
+			return -1;
+		}
+		return 0;
+	}
+
+	template<typename B>
 	IDPool<B>::IDPool()
 	: beg_(0), end_(0), file_(0), bm_(), full_alloc_(false), max_used_(0)
-	{
-		// bm_.resize(4096, true);
-	}
+	{}
 
 	template<typename B>
 	IDPool<B>::IDPool(char const* tfile, B beg)
@@ -90,16 +105,9 @@ namespace BDB {
 		}
 		std::stringstream ss;
 		ss<<"+"<<rt<<"\n";
-		errno = 0;
-		if(ss.str().size() !=  fwrite(ss.str().c_str(), 1, ss.str().size(), file_)){
-			ECType ec_tmp = error_code(errno, system_category());
-			if(errc::no_space_on_device == ec_tmp)
-				*ec = make_error_code(bdb_errc::idpool_no_space);
-			else
-				*ec = make_error_code(bdb_errc::idpool_disk_failure);
+		if(-1 == write(ss.str().c_str(), ss.str().size(), ec))
 			return -1;
-			//throw std::runtime_error("IDPool(Acquire): write transaction failure");
-		}
+		
 		bm_[rt] = false;
 
 		if(beg_ + rt > max_used_) max_used_ = beg_ + rt;
@@ -118,23 +126,27 @@ namespace BDB {
 
 		std::stringstream ss;
 		ss<<"-"<<(id-beg_)<<"\n";
-		errno = 0;
+		if(-1 == write(ss.str().c_str(), ss.str().size(), ec))
+			return -1;
+		/*
 		if(ss.str().size() !=  fwrite(ss.str().c_str(), 1, ss.str().size(), file_)){
-			//*ec = make_error_code(errc::idpool_disk_failure);
+			// *ec = make_error_code(errc::idpool_disk_failure);
 			//return -1;
 			throw std::runtime_error("IDPool(Acquire): write transaction failure");
-		}		
+		}
+		*/
 		bm_[id - beg_] = true;
 		return 0;
 	}
 
-
+	/*
 	template<typename B>
 	bool 
 	IDPool<B>::avail() const
 	{ 
 		return bm_.any();
 	}
+	*/
 
 	template<typename B>
 	B
@@ -217,7 +229,7 @@ namespace BDB {
 	template<typename B>
 	void IDPool<B>::extend()
 	{ 
-		Bitmap::size_type size = bm_.size();
+		typename Bitmap::size_type size = bm_.size();
 		size = (size<<1) -  (size>>1);
 
 		if( size < bm_.size() || size >= end_ - beg_)

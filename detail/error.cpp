@@ -12,7 +12,6 @@ namespace BDB {
 		"Non exist address"
 	};
 	
-	/// new try
 	
 	char const *
 	bdb_category_impl::name() const
@@ -21,15 +20,14 @@ namespace BDB {
 	std::string 
 	bdb_category_impl::message(int ev) const
 	{
-		using namespace bdb_errc;
 
 		switch(ev){
-		case idpool_no_space:
-			return "idpool: no space on device";
-		case idpool_alloc_failure: 
-			return "idpool: bitmap resize failure";
-		case idpool_disk_failure:
-			return "idpool: write transaction failure";
+		case bdb_errc::idpool_no_space:
+			return "(idpool) no space on device";
+		case bdb_errc::idpool_alloc_failure: 
+			return "(idpool) bitmap resize failure";
+		case bdb_errc::idpool_disk_failure:
+			return "(idpool) write transaction failure";
 		}
 		return "unknow";
 	}
@@ -58,15 +56,23 @@ namespace BDB {
 		return inst;
 	}
 
-	error_code
-	make_error_code(int e)
-	{ return error_code(e, bdb_error_category()); }
-
-
-	error_condition
-	make_error_condition(int e)
-	{ return error_condition(e, bdb_error_category()); }
-
+	
 
 
 } // end of namespace BDB
+
+namespace boost {
+	
+	namespace system { 
+		error_code
+		make_error_code(int e)
+		{ return error_code(e, BDB::bdb_error_category()); }
+
+
+		error_condition
+		make_error_condition(int e)
+		{ return error_condition(e, BDB::bdb_error_category()); }
+	
+	} // end of namespace system
+
+} // end of namespace boost

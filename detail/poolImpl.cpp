@@ -86,20 +86,20 @@ namespace BDB {
 		
 		if(-1 == headerPool_.write(header, loc_addr)){
 			// write failure
-			idPool_->Release(loc_addr);
+			idPool_->Release(loc_addr, ec);
 			on_error(SYSTEM_ERROR, __LINE__);
 			return -1;
 		}
 		
 		if(-1 == seek(loc_addr)){
-			idPool_->Release(loc_addr);
+			idPool_->Release(loc_addr, ec);
 			on_error(SYSTEM_ERROR, __LINE__);
 			return -1;
 		}
 
 		if(size != fwrite(data, 1, size, file_)){
 			// write failure
-			idPool_->Release(loc_addr);
+			idPool_->Release(loc_addr, ec);
 			on_error(SYSTEM_ERROR, __LINE__);
 			return -1;
 		}
