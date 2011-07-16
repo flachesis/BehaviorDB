@@ -6,11 +6,6 @@
 #include "common.hpp"
 #include "addr_eval.hpp"
 
-namespace boost {
-	namespace system {
-		class error_code;
-	}	
-} // end of namespace boost
 
 
 namespace BDB {
@@ -18,8 +13,6 @@ namespace BDB {
 	template<typename B, typename V>
 	class IDValPool;
 	
-	using boost::system::error_code;
-
 	struct pool;
 	struct AddrIterator;	
 	

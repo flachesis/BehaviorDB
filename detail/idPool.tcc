@@ -82,7 +82,7 @@ namespace BDB {
 				try {
 					extend();  
 				}catch(std::bad_alloc const& e){ 
-					*ec = error_code(errc::not_enough_memory, err_cat_);
+					*ec = make_error_code(bdb_errc::idpool_alloc_failure);
 					return -1;
 				}
 				rt = bm_.find_first();
@@ -92,7 +92,11 @@ namespace BDB {
 		ss<<"+"<<rt<<"\n";
 		errno = 0;
 		if(ss.str().size() !=  fwrite(ss.str().c_str(), 1, ss.str().size(), file_)){
-			*ec = error_code(errno, err_cat_);
+			ECType ec_tmp = error_code(errno, system_category());
+			if(errc::no_space_on_device == ec_tmp)
+				*ec = make_error_code(bdb_errc::idpool_no_space);
+			else
+				*ec = make_error_code(bdb_errc::idpool_disk_failure);
 			return -1;
 			//throw std::runtime_error("IDPool(Acquire): write transaction failure");
 		}
@@ -116,9 +120,9 @@ namespace BDB {
 		ss<<"-"<<(id-beg_)<<"\n";
 		errno = 0;
 		if(ss.str().size() !=  fwrite(ss.str().c_str(), 1, ss.str().size(), file_)){
-			*ec = error_code(errno, err_cat_);
-			return -1;
-			//throw std::runtime_error("IDPool(Acquire): write transaction failure");
+			//*ec = make_error_code(errc::idpool_disk_failure);
+			//return -1;
+			throw std::runtime_error("IDPool(Acquire): write transaction failure");
 		}		
 		bm_[id - beg_] = true;
 		return 0;

@@ -15,8 +15,8 @@ namespace BDB {
 	{ if(!*impl_) return 0; return this; }
 	
 	AddrType
-	BehaviorDB::put(char const *data, size_t size)
-	{ return impl_->put(data, size); }
+	BehaviorDB::put(char const *data, size_t size, error_code *ec)
+	{ return impl_->put(data, size, ec); }
 
 	AddrType
 	BehaviorDB::put(char const *data, size_t size, AddrType addr, size_t off)

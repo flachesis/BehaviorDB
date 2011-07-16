@@ -5,11 +5,13 @@
 #include "export.hpp"
 #include "common.hpp"
 
+
 namespace BDB {
 	
+
 	struct BDBImpl;
 	struct AddrIterator;
-	
+
 	struct BDB_EXPORT BehaviorDB
 	{
 		/** @brief Constructor
@@ -33,7 +35,7 @@ namespace BDB {
 		 *  @return Address of the stored data.
 		 */
 		AddrType
-		put(char const *data, size_t size);
+		put(char const *data, size_t size, error_code* ec);
 		
 		/** @brief Put data to a specific address
 		 *  @param data

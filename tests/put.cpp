@@ -1,4 +1,5 @@
 #include "bdb.hpp"
+#include "error.hpp"
 #include <iostream>
 #include <iomanip>
 #include <vector>
@@ -22,9 +23,10 @@ int main(int argc, char** argv)
 	
 	char const* data = "acer";
 	vector<AddrType> addrs;
+	error_code ec;
 	for(int i=0;i<10000;++i){
-		addrs.push_back(bdb.put(data, 4));
-		if(-1 == addrs[i]){
+		addrs.push_back(bdb.put(data, 4, &ec));
+		if(ec){
 			cerr<<"put failure"<<endl;
 			break;
 		}

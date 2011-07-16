@@ -134,7 +134,6 @@ namespace BDB {
 		Bitmap bm_;
 		bool full_alloc_;
 		BlockType max_used_;
-		idpool_error_category err_cat_;
 	};
 
 	/** @brief Extend IDPool<B> for associating a value with a ID.

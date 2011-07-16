@@ -22,8 +22,16 @@
 /// TODO make sure this is OK in win
 #include <stddef.h>
 
+namespace boost {
+	namespace system {
+		class error_code;
+	}	
+} // end of namespace boost
+
 namespace BDB {
 	
+	using boost::system::error_code;
+
 	typedef unsigned int AddrType;
 	typedef size_t (*Chunk_size_est)(unsigned int dir, size_t min_size);
 

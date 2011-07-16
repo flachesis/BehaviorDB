@@ -7,6 +7,8 @@
 namespace BDB  {
 
 	using boost::system::error_code;
+	using boost::system::error_category;
+	using boost::system::error_condition;
 
 	//! Error numbers
 	enum ERRORNUMBER
@@ -36,13 +38,39 @@ namespace BDB  {
 		static char buf[6][40];
 	};
 	
-	class idpool_error_category 
-	: public boost::system::error_category
+
+	namespace bdb_errc {
+		enum {
+			idpool_no_space = 1,
+			idpool_disk_failure,
+			idpool_alloc_failure
+		};
+	} // end of namespace BDB_ERROR
+	
+	class bdb_category_impl
+	: public error_category
 	{
 	public:
-		char const* name() const;
-		std::string message(int ev) const;
+		virtual char const* 
+		name() const;
+
+		virtual std::string 
+		message(int ev) const;
+
+		virtual bool 
+		equivalent(error_code const & ec, int cond) const; 
 	};
+
+	error_category const& 
+	bdb_error_category();
+
+	error_code 
+	make_error_code(int e);
+
+	error_condition
+	make_error_condition(int e);
+
+
 } // end of namespace BDB
 
 #endif // end of header
