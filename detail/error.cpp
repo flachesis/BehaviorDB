@@ -12,6 +12,19 @@ namespace BDB {
 		"Non exist address"
 	};
 	
+	class bdb_category_impl
+	: public error_category
+	{
+	public:
+		virtual char const* 
+		name() const;
+
+		virtual std::string 
+		message(int ev) const;
+
+		virtual bool 
+		equivalent(error_code const & ec, int cond) const; 
+	};
 	
 	char const *
 	bdb_category_impl::name() const
@@ -68,13 +81,13 @@ namespace boost {
 	
 	namespace system { 
 		error_code
-		make_error_code(int e)
-		{ return error_code(e, BDB::bdb_error_category()); }
+		make_error_code(BDB::bdb_errc::errc_t e)
+		{ return error_code((int)e, BDB::bdb_error_category()); }
 
 
 		error_condition
-		make_error_condition(int e)
-		{ return error_condition(e, BDB::bdb_error_category()); }
+		make_error_condition(BDB::bdb_errc::errc_t e)
+		{ return error_condition((int)e, BDB::bdb_error_category()); }
 	
 	} // end of namespace system
 
