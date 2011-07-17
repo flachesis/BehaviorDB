@@ -28,6 +28,8 @@ namespace BDB {
 			return "(idpool) bitmap resize failure";
 		case bdb_errc::idpool_disk_failure:
 			return "(idpool) write transaction failure";
+		case bdb_errc::idpool_full:
+			return "(idpool) bitmap full";
 		}
 		return "unknow";
 	}

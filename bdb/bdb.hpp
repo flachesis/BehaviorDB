@@ -47,7 +47,7 @@ namespace BDB {
 		 *  append operation.
 		 */
 		AddrType
-		put(char const *data, size_t size, AddrType addr, size_t off=npos);
+		put(char const *data, size_t size, AddrType addr, size_t off, error_code *ec);
 		
 		AddrType
 		put(std::string const& data);

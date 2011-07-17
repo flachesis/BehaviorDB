@@ -114,7 +114,7 @@ namespace BDB {
 
 
 	AddrType
-	BDBImpl::put(char const* data, size_t size, AddrType addr, size_t off)
+	BDBImpl::put(char const* data, size_t size, AddrType addr, size_t off, error_code * ec)
 	{
 		assert(0 != *this && "BDBImpl is not proper initiated");
 
@@ -157,7 +157,7 @@ namespace BDB {
 		// **Althought the chunk need not migrate to another pool, it might be moved to 
 		// another chunk of the same pool due to size of data to be moved exceed size of 
 		// migration buffer that a pool contains
-		if(-1 == (loc_addr = pools_[dir].write(data, size, loc_addr, off, &header)) ){
+		if(-1 == (loc_addr = pools_[dir].write(data, size, loc_addr, off, ec, &header)) ){
 			error(dir);
 			return -1;	
 		}

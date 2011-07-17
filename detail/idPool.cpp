@@ -119,8 +119,12 @@ namespace BDB {
 					return -1;
 				}
 				rt = bm_.find_first();
+			}else{
+				*ec = make_error_code(bdb_errc::idpool_full);
+				return -1;	
 			}
 		}
+
 		std::stringstream ss;
 		ss<<"+"<<rt<<"\n";
 		if(-1 == write(ss.str().c_str(), ss.str().size(), ec))
@@ -261,12 +265,16 @@ namespace BDB {
 	
 	AddrType IDValPool::Acquire(AddrType const &val, error_code *ec)
 	{
+		using namespace boost::system;
+
 		if(!*this) return -1;
 
 		AddrType rt;
 		
-		if( super::Bitmap::npos == (rt = super::bm_.find_first()) )
+		if( super::Bitmap::npos == (rt = super::bm_.find_first()) ){
+			*ec = make_error_code(bdb_errc::idpool_full);
 			return -1;
+		}
 
 		std::stringstream ss;
 		ss<<"+"<<rt<<"\t"<<val<<"\n";

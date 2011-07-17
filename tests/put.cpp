@@ -14,6 +14,7 @@ int main(int argc, char** argv)
 {
 	using namespace std;
 	using namespace BDB;
+	using namespace boost::system;
 
 	Config conf;
 	conf.root_dir = "tmp/";

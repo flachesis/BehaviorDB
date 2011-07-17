@@ -43,7 +43,8 @@ namespace BDB  {
 		enum errc_t{
 			idpool_no_space = 1,
 			idpool_disk_failure,
-			idpool_alloc_failure
+			idpool_alloc_failure,
+			idpool_full
 		};
 	} // end of namespace BDB_ERROR
 	

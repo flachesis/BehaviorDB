@@ -37,7 +37,7 @@ namespace BDB {
 		put(char const *data, size_t size, error_code *ec=0);
 
 		AddrType
-		put(char const *data, size_t size, AddrType addr, size_t off=npos);
+		put(char const *data, size_t size, AddrType addr, size_t off, error_code *ec=0);
 		
 		AddrType
 		put(std::string const& data)
