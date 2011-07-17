@@ -114,8 +114,12 @@ namespace BDB {
 
 		int 
 		write(char const *data, size_t size, error_code *ec);
-
+		
+		/** Extend bitmap size to 1.5 times large
+		 *  @throw std::bad_alloc
+		 */
 		void extend();
+
 		IDPool(AddrType beg, AddrType end);
 
 	private:
@@ -144,7 +148,7 @@ namespace BDB {
 		 * @param val
 		 * @return ID
 		 */
-		AddrType Acquire(AddrType const &val);
+		AddrType Acquire(AddrType const &val, error_code *ec=0);
 		
 		/** Find value by ID
 		 * @param id
@@ -160,6 +164,7 @@ namespace BDB {
 		 */
 		void Update(AddrType const& id, AddrType const &val);
 
+	protected:
 		void replay_transaction(char const* transaction_file);
 
 		// size_t block_size() const;

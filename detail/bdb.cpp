@@ -47,8 +47,8 @@ namespace BDB {
 	{ return impl_->get(output, max, addr, off); }
 
 	size_t
-	BehaviorDB::del(AddrType addr)
-	{ return impl_->del(addr); }
+	BehaviorDB::del(AddrType addr, error_code *ec)
+	{ return impl_->del(addr, ec); }
 
 	size_t
 	BehaviorDB::del(AddrType addr, size_t off, size_t size)

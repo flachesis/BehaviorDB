@@ -77,7 +77,7 @@ namespace BDB
 			pool *dest_pool, ChunkHeader const* header=0);
 
 		size_t
-		erase(AddrType addr);
+		erase(AddrType addr, error_code *ec=0);
 
 		size_t
 		erase(AddrType addr, size_t off, size_t size);

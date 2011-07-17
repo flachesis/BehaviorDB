@@ -146,13 +146,6 @@ namespace BDB {
 		ss<<"-"<<(id-beg_)<<"\n";
 		if(-1 == write(ss.str().c_str(), ss.str().size(), ec))
 			return -1;
-		/*
-		if(ss.str().size() !=  fwrite(ss.str().c_str(), 1, ss.str().size(), file_)){
-			// *ec = make_error_code(errc::idpool_disk_failure);
-			//return -1;
-			throw std::runtime_error("IDPool(Acquire): write transaction failure");
-		}
-		*/
 		bm_[id - beg_] = true;
 		return 0;
 	}
@@ -266,7 +259,7 @@ namespace BDB {
 	}
 
 	
-	AddrType IDValPool::Acquire(AddrType const &val)
+	AddrType IDValPool::Acquire(AddrType const &val, error_code *ec)
 	{
 		if(!*this) return -1;
 
@@ -278,8 +271,8 @@ namespace BDB {
 		std::stringstream ss;
 		ss<<"+"<<rt<<"\t"<<val<<"\n";
 
-		if(ss.str().size() !=  fwrite(ss.str().c_str(), 1, ss.str().size(), super::file_))
-			throw std::runtime_error("IDValPool(Acquire): write transaction failure");
+		if(-1 == write(ss.str().c_str(), ss.str().size(), ec))
+			return -1;
 
 		super::bm_[rt] = false;
 

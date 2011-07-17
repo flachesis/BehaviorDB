@@ -67,15 +67,6 @@ namespace BDB {
 	pool::write(char const* data, size_t size, error_code* ec)
 	{
 		assert(0 != *this && "pool is not proper initiated");
-		
-		/** bug: this should be checked after idPool_->extend()
-		if(!idPool_->avail()){
-			// no space error
-			on_error(ADDRESS_OVERFLOW, __LINE__);
-			return -1;
-		}
-		*/
-		
 		assert(true == addrEval::capacity_test(dirID, size));
 		
 		AddrType loc_addr = idPool_->Acquire(ec);
@@ -85,22 +76,26 @@ namespace BDB {
 		header.size = size;
 		
 		if(-1 == headerPool_.write(header, loc_addr)){
-			// write failure
-			idPool_->Release(loc_addr, ec);
 			on_error(SYSTEM_ERROR, __LINE__);
+			error_code ec_tmp;
+			idPool_->Release(loc_addr, &ec_tmp);
+			if(ec_tmp) *ec = ec_tmp;
 			return -1;
 		}
 		
 		if(-1 == seek(loc_addr)){
-			idPool_->Release(loc_addr, ec);
 			on_error(SYSTEM_ERROR, __LINE__);
+			error_code ec_tmp;
+			idPool_->Release(loc_addr, &ec_tmp);
+			if(ec_tmp) *ec = ec_tmp;
 			return -1;
 		}
 
 		if(size != fwrite(data, 1, size, file_)){
-			// write failure
-			idPool_->Release(loc_addr, ec);
 			on_error(SYSTEM_ERROR, __LINE__);
+			error_code ec_tmp;
+			idPool_->Release(loc_addr, &ec_tmp);
+			if(ec_tmp) *ec = ec_tmp;
 			return -1;
 		}
 
@@ -396,13 +391,14 @@ namespace BDB {
 	}
 
 	size_t
-	pool::erase(AddrType addr)
+	pool::erase(AddrType addr, error_code* ec)
 	{ 
 		assert(0 != *this && "pool is not proper initiated");
 
-		if(idPool_->isAcquired(addr))
-			idPool_->Release(addr);
-		else {
+		if(idPool_->isAcquired(addr)){
+			idPool_->Release(addr, ec);
+			if(*ec) return -1;
+		}else {
 			on_error(NON_EXIST, __LINE__);
 			return -1;
 		}

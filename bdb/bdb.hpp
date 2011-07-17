@@ -68,7 +68,7 @@ namespace BDB {
 		get(std::string *output, size_t max, AddrType addr, size_t off=0);
 
 		size_t
-		del(AddrType addr);
+		del(AddrType addr, error_code* ec=0);
 
 		size_t
 		del(AddrType addr, size_t off, size_t size);

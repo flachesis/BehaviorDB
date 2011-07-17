@@ -81,24 +81,30 @@ namespace BDB {
 		assert(0 != *this && "BDBImpl is not proper initiated");
 
 		unsigned int dir = addrEval::directory(size);
-		AddrType rt(0);
+		AddrType rt(0), loc_addr(0);
 		while(dir < addrEval::dir_count()){
 			ec->clear();
-			rt = pools_[dir].write(data, size, ec);
+			loc_addr = pools_[dir].write(data, size, ec);
 			if(!*ec)	break;
 			dir++;
 		}
 		
 		if(*ec){
 			/// TODO modify BDBImpl::error() to accomondate error_code
-			error(dir-1);
+			error(dir - 1);
 			return -1;
 		}
+		
+		rt = addrEval::global_addr(dir, loc_addr);
+		rt = global_id_->Acquire(rt, ec);
 
-		rt = addrEval::global_addr(dir, rt);
-		rt = global_id_->Acquire(rt);
-
-		if(-1 == rt){
+		if(*ec){
+			error_code ec_tmp;
+			pools_[dir-1].erase(loc_addr, &ec_tmp);
+			if(ec_tmp){
+				*ec = ec_tmp;
+				return -1;
+			}
 			error(ADDRESS_OVERFLOW, __LINE__);
 			return -1;
 		}
@@ -230,7 +236,7 @@ namespace BDB {
 	}
 
 	size_t
-	BDBImpl::del(AddrType addr)
+	BDBImpl::del(AddrType addr, error_code *ec)
 	{
 		assert(0 != *this && "BDBImpl is not proper initiated");
 	
@@ -243,11 +249,14 @@ namespace BDB {
 		unsigned int dir = addrEval::addr_to_dir(internal_addr);
 		AddrType loc_addr = addrEval::local_addr(internal_addr);
 		
-		if(-1 == pools_[dir].erase(loc_addr)){
+		pools_[dir].erase(loc_addr, ec);
+		if(*ec){
 			error(dir);
 			return -1;	
 		}
-		global_id_->Release(addr);
+		global_id_->Release(addr, ec);
+		if(*ec)
+			return -1;
 		return 0;
 	}
 

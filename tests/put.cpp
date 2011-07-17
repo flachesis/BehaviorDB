@@ -31,11 +31,15 @@ int main(int argc, char** argv)
 			cerr<<"err_msg: "<<ec.message()<<endl;
 			break;
 		}
-		printf("%08x\n", addrs[i]);
+		//printf("%08x\n", addrs[i]);
 	}
 	
 	for(int i=0;i<10000;++i){
-		bdb.del(addrs[i]);
+		bdb.del(addrs[i], &ec);
+		if(ec){
+			cerr<<"del failure"<<endl;
+			break;
+		}
 	}
 
 	return 0;
