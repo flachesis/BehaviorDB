@@ -105,7 +105,8 @@ namespace BDB {
 	
 	// off == npos represents an append write
 	AddrType
-	pool::write(char const* data, size_t size, AddrType addr, size_t off, ChunkHeader const* header)
+	pool::write(char const* data, size_t size, AddrType addr, size_t off, 
+		error_code* ec, ChunkHeader const* header)
 	{
 		assert(0 != *this && "pool is not proper initiated");
 		
@@ -166,7 +167,7 @@ namespace BDB {
 		size_t partial(0);
 		// write new data
 		if(size != (partial = fwrite(data, 1, size, file_))){
-			if(partial) // intermediate state
+			if(partial) // TODO intermediate state
 				idPool_->Release(addr);
 			on_error(SYSTEM_ERROR, __LINE__);
 			return -1;
