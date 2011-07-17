@@ -44,7 +44,8 @@ namespace BDB {
 			return ec == errc::not_enough_memory;
 		case bdb_errc::idpool_disk_failure:
 			return ec == errc::io_error ||
-				ec == errc::interrupted;
+				ec == errc::bad_address ||
+				ec == errc::file_too_large;
 		}
 		return false;
 	}

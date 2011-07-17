@@ -16,14 +16,21 @@ namespace BDB {
 	IDPool::write(char const* data, size_t size, error_code *ec)
 	{
 		using namespace boost::system;
-		errno = 0;
-		if(size !=  fwrite(data, 1, size, file_)){
-			ECType ec_tmp = error_code(errno, system_category());
-			if(errc::no_space_on_device == ec_tmp)
-				*ec = make_error_code(bdb_errc::idpool_no_space);
-			else
-				*ec = make_error_code(bdb_errc::idpool_disk_failure);
-			return -1;
+		while(size>0){
+			errno = 0;
+			size_t written = fwrite(data, 1, size, file_);
+			if(written != size){
+				ECType ec_tmp = error_code(errno, system_category());
+				if(errc::interrupted == ec_tmp) // EINTR
+					continue;
+				else if(errc::no_space_on_device == ec_tmp) // ENOSP
+					*ec = make_error_code(bdb_errc::idpool_no_space);
+				else // EIO || EFBIG || EFAULT
+					*ec = make_error_code(bdb_errc::idpool_disk_failure);
+				return -1;
+			}
+			data += written;
+			size -= written;
 		}
 		return 0;
 	}
