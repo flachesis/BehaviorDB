@@ -28,6 +28,7 @@ int main(int argc, char** argv)
 	for(int i=0;i<10000;++i){
 		addrs.push_back(bdb.put(data, 4, &ec));
 		if(ec == bdb_errc::idpool_no_space){
+			
 			cerr<<"err_category: "<<ec.category().name()<<endl;
 			cerr<<"err_msg: "<<ec.message()<<endl;
 			break;

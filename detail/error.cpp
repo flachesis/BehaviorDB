@@ -78,17 +78,17 @@ namespace BDB {
 } // end of namespace BDB
 
 namespace boost {
+namespace system { 
 	
-	namespace system { 
-		error_code
-		make_error_code(BDB::bdb_errc::errc_t e)
-		{ return error_code((int)e, BDB::bdb_error_category()); }
+	error_code
+	make_error_code(BDB::bdb_errc::errc_t e)
+	{ return error_code((int)e, BDB::bdb_error_category()); }
 
 
-		error_condition
-		make_error_condition(BDB::bdb_errc::errc_t e)
-		{ return error_condition((int)e, BDB::bdb_error_category()); }
-	
-	} // end of namespace system
+	error_condition
+	make_error_condition(BDB::bdb_errc::errc_t e)
+	{ return error_condition((int)e, BDB::bdb_error_category()); }
 
+} // end of namespace system
 } // end of namespace boost
+
