@@ -27,8 +27,11 @@ int main(int argc, char** argv)
 	error_code ec;
 	for(int i=0;i<10000;++i){
 		addrs.push_back(bdb.put(data, 4, &ec));
-		if(ec == bdb_errc::idpool_no_space){
-			
+		if(ec){
+			error_condition econ = ec.default_error_condition();
+			cerr<<"is disk full?"<<(ec == bdb_errc::basic::disk_full)<<endl;
+			cerr<<"is disk failure?"<<(econ == error_code(errc::io_error, system_category()))<<endl;
+			cerr<<"is disk failure?"<<(econ == make_error_code(bdb_errc::basic::disk_failure))<<endl;
 			cerr<<"err_category: "<<ec.category().name()<<endl;
 			cerr<<"err_msg: "<<ec.message()<<endl;
 			break;

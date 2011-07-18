@@ -41,12 +41,14 @@ namespace BDB  {
 	namespace bdb_errc {
 		namespace basic {
 			enum errc_t {
-				disk_full=1,
+				success = boost::system::errc::success,
+				disk_full = boost::system::errc::no_space_on_device,
+				again = boost::system::errc::resource_unavailable_try_again,
+				bad_alloc = boost::system::errc::not_enough_memory,
+				bad_address = boost::system::errc::bad_address,
+				unrecoverable = boost::system::errc::state_not_recoverable,
 				disk_failure,
-				memory_full,
-				wrong_address,
 				not_found,
-				too_large
 			};
 		} // end of namespace basic 
 		
@@ -54,14 +56,14 @@ namespace BDB  {
 			enum errc_t {
 				disk_full = basic::disk_full,
 				disk_failure = basic::disk_failure,
-				bitmap_full = basic::memory_full,
-				bitmap_resize_failure
+				bitmap_full = basic::again,
+				bitmap_resize_failure = basic::bad_alloc
 			};
 		} // end of namespace idpool
 		
 		namespace header_pool {
 			enum errc_t {
-				disk_failure = basic::disk_failure,
+				disk_failure = basic::disk_failure
 			};
 		} // end of namespace header_pool
 		
@@ -70,9 +72,8 @@ namespace BDB  {
 				disk_full = basic::disk_full,
 				disk_failure = basic::disk_failure,
 				not_found = basic::not_found,
-				invalid_source,
-				invalid_dest,
-				data_broken,
+				bad_address = basic::bad_address,
+				data_broken = basic::unrecoverable
 			};
 		} // end of namespace pool
 
@@ -94,6 +95,18 @@ namespace BDB  {
 	} // end of namespace BDB_ERROR
 	
 	error_category const& 
+	basic_category();
+
+	error_category const& 
+	id_pool_category();
+
+	error_category const& 
+	header_pool_category();
+
+	error_category const& 
+	bdb_category();
+
+	error_category const& 
 	bdb_error_category();
 	
 	
@@ -104,6 +117,56 @@ namespace BDB  {
 
 namespace boost {
 namespace system {
+		
+	template<> struct is_error_condition_enum<BDB::bdb_errc::basic::errc_t>
+	{ static const bool value = true; };
+
+	template<> struct is_error_condition_enum<BDB::bdb_errc::id_pool::errc_t>
+	{ static const bool value = true; };
+
+	template<> struct is_error_condition_enum<BDB::bdb_errc::header_pool::errc_t>
+	{ static const bool value = true; };
+	
+	template<> struct is_error_condition_enum<BDB::bdb_errc::pool::errc_t>
+	{ static const bool value = true; };
+
+	template<> struct is_error_condition_enum<BDB::bdb_errc::bdb::errc_t>
+	{ static const bool value = true; };
+
+	error_code 
+	make_error_code(BDB::bdb_errc::basic::errc_t e);
+	
+	error_condition
+	make_error_condition(BDB::bdb_errc::basic::errc_t e);
+
+
+	error_code 
+	make_error_code(BDB::bdb_errc::id_pool::errc_t e);
+	
+	error_condition
+	make_error_condition(BDB::bdb_errc::id_pool::errc_t e);
+
+
+	error_code 
+	make_error_code(BDB::bdb_errc::header_pool::errc_t e);
+	
+	error_condition
+	make_error_condition(BDB::bdb_errc::header_pool::errc_t e);
+
+	error_code 
+	make_error_code(BDB::bdb_errc::pool::errc_t e);
+	
+	error_condition
+	make_error_condition(BDB::bdb_errc::pool::errc_t e);
+
+	error_code 
+	make_error_code(BDB::bdb_errc::bdb::errc_t e);
+	
+	error_condition
+	make_error_condition(BDB::bdb_errc::bdb::errc_t e);
+
+	// old
+
 	template<> struct is_error_condition_enum<BDB::bdb_errc::errc_t>
 	{ static const bool value = true; };
 

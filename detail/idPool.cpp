@@ -16,6 +16,10 @@ namespace BDB {
 	IDPool::write(char const* data, size_t size, error_code *ec)
 	{
 		using namespace boost::system;
+		
+		*ec = make_error_code(bdb_errc::id_pool::disk_failure);
+		return -1;
+
 		while(size>0){
 			errno = 0;
 			size_t written = fwrite(data, 1, size, file_);
@@ -24,9 +28,9 @@ namespace BDB {
 				if(errc::interrupted == ec_tmp) // EINTR
 					continue;
 				else if(errc::no_space_on_device == ec_tmp) // ENOSP
-					*ec = make_error_code(bdb_errc::idpool_no_space);
+					*ec = make_error_code(bdb_errc::id_pool::disk_full);
 				else // EIO || EFBIG || EFAULT
-					*ec = make_error_code(bdb_errc::idpool_disk_failure);
+					*ec = make_error_code(bdb_errc::id_pool::disk_failure);
 				return -1;
 			}
 			data += written;
@@ -115,12 +119,12 @@ namespace BDB {
 				try {
 					extend();  
 				}catch(std::bad_alloc const& e){ 
-					*ec = make_error_code(bdb_errc::idpool_alloc_failure);
+					*ec = make_error_code(bdb_errc::id_pool::bitmap_resize_failure);
 					return -1;
 				}
 				rt = bm_.find_first();
 			}else{
-				*ec = make_error_code(bdb_errc::idpool_full);
+				*ec = make_error_code(bdb_errc::id_pool::bitmap_full);
 				return -1;	
 			}
 		}
@@ -272,7 +276,7 @@ namespace BDB {
 		AddrType rt;
 		
 		if( super::Bitmap::npos == (rt = super::bm_.find_first()) ){
-			*ec = make_error_code(bdb_errc::idpool_full);
+			*ec = make_error_code(bdb_errc::id_pool::bitmap_full);
 			return -1;
 		}
 
